@@ -1,10 +1,29 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Text, View, Image, FlatList } from 'react-native'
 import MapView, { PROVIDER_GOOGLE, Marker } from 'react-native-maps'
-
-import cars from '../../assets/data/cars'
+import { API, graphqlOperation } from 'aws-amplify'
+import { listCars } from '../../graphql/queries'
 
 const HomeMap = (props) => {
+
+    const [cars, setCars] = useState([]);
+
+    useEffect(()=>{
+        const fetchCars = async () => {
+            try {
+                const response = await API.graphql(
+                    graphqlOperation(
+                        listCars
+                    )
+                )
+                setCars(response.data.listCars.items);
+            } catch (error) {
+                console.log(error)
+            }
+        }
+        fetchCars();
+    },[])
+
 
     const getImage = (type) => {
         if (type === "UberX") {
