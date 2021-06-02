@@ -14,6 +14,8 @@ import {
   StatusBar,
 } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
+import { withAuthenticator } from 'aws-amplify-react-native'
+
 import Router from './src/navigation/Root';
 
 navigator.geolocation = require('@react-native-community/geolocation');
@@ -66,4 +68,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default withAuthenticator(App);

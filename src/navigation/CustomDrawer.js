@@ -1,6 +1,7 @@
 import React from 'react'
 import { View, Text, Pressable } from 'react-native'
 import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer"
+import { Auth } from 'aws-amplify'
 
 const CustomDrawer = (props) => {
     return (
@@ -12,16 +13,16 @@ const CustomDrawer = (props) => {
                     alignItems: 'center',
                 }}>
                     <View style={{
-                        backgroundColor: "#cacaca", 
-                        width: 50, 
+                        backgroundColor: "#cacaca",
+                        width: 50,
                         height: 50,
                         borderRadius: 25,
                         marginRight: 10,
                     }} />
 
                     <View>
-                        <Text style={{color: 'white', fontSize:24}}>Naehyung Kim</Text>
-                        <Text style={{color: "#eee"}}>5.00 *</Text>
+                        <Text style={{ color: 'white', fontSize: 24 }}>Naehyung Kim</Text>
+                        <Text style={{ color: "#eee" }}>5.00 *</Text>
                     </View>
 
                 </View>
@@ -47,8 +48,15 @@ const CustomDrawer = (props) => {
                 <Pressable onPress={() => { console.warn("Make money driving") }}>
                     <Text style={{ color: 'white', paddingVertical: 5, }}>Make money driving</Text>
                 </Pressable>
+
             </View>
             <DrawerItemList {...props} />
+
+            <Pressable onPress={() => { Auth.signOut() }}>
+                <Text style={{ padding: 5, paddingLeft: 19, marginTop: 'auto' }}>Logout</Text>
+            </Pressable>
+
+
         </DrawerContentScrollView>
     )
 }
