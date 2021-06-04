@@ -6,6 +6,9 @@ import Entypo from 'react-native-vector-icons/Entypo'
 import Ionicons from 'react-native-vector-icons/Ionicons'
 import FontAwesome from 'react-native-vector-icons/FontAwesome'
 import NewOrderPopup from '../../components/NewOrderPopup';
+import {API, graphqlOperation, Auth} from 'aws-amplify'
+import {getCar, listOrders} from '../../graphql/queries'
+import {updateCar} from '../../graphql/mutations'
 import styles from './style'
 
 const origin = { latitude: 28.450927, longitude: -16.260845,};
@@ -14,39 +17,91 @@ const GOOGLE_MAPS_APIKEY = "AIzaSyBO262gv9qxp01ep4aFyaWp6mRYHFEAV60"
 
 const HomeScreen = (props) => {
 
-    const [isOnline, setIsOnline] = useState(false)
+    const [car, setCar] = useState(null)
     const [myPosition, setMyPosition] = useState(null)
     const [order, setOrder] = useState(null)
-    const [newOrder, setNewOrder] = useState({
-        id: '1',
-        type: 'UberX',
+    const [newOrders, setNewOrders] = useState([])
 
-        originLatitude: 28.450027,
-        originLongitude: -16.263845,
-
-        destLatitude: 28.450927,
-        desLongitude: -16.260845,
-        user: {
-            rating: 4.9,
-            name: 'Clara',
+    const fetchCar = async () => {
+        try {
+            const userData = await Auth.currentAuthenticatedUser();
+            const carData = await API.graphql(
+                graphqlOperation(
+                    getCar, {id: userData.attributes.sub}
+                )
+            )
+            setCar(carData.data.getCar)
+        } catch (error) {
+            console.log(error)
         }
-    })
+    }
+
+    const fetchOrders = async () => {
+        try {
+            const ordersData = await API.graphql(
+                graphqlOperation(
+                    listOrders,
+                    //{filter: { status: { eq: "NEW" }}}
+                )
+            )
+            setNewOrders(ordersData.data.listOrders.items)
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    useEffect(()=>{
+        fetchCar();
+        fetchOrders();
+    },[])
 
     const onDecline = () => {
-        setNewOrder(null)
+        setNewOrders(newOrders.slice(1))
     }
 
     const onAccept = (newOrder) => {
         setOrder(newOrder)
-        setNewOrder(null)
+        setNewOrders(newOrders.slice(1))
     }
 
-    const onGoPress = () => {
-        setIsOnline(!isOnline)
+    const onGoPress = async () => {
+        //Update the car and set it to active
+        try {
+            const userData = await Auth.currentAuthenticatedUser();
+            const input = {
+                id: userData.attributes.sub,
+                isActive: !car.isActive
+            }
+            const updatedCarData = await API.graphql(
+                graphqlOperation(updateCar, {
+                    input
+                })
+            )
+            setCar(updatedCarData.data.updateCar)
+        } catch (error) {
+            console.log(error)
+        }
     }
 
-    const onUserLocationChange = (event) => {
-        setMyPosition(event.nativeEvent.coordinate)
+    const onUserLocationChange = async (event) => {
+        const {latitude, longitude, heading} = event.nativeEvent.coordinate
+        try {
+            const userData = await Auth.currentAuthenticatedUser();
+            const input = {
+                id: userData.attributes.sub,
+                latitude,
+                longitude,
+                heading,
+            }
+            const updatedCarData = await API.graphql(
+                graphqlOperation(updateCar, {
+                    input
+                })
+            )
+            setCar(updatedCarData.data.updateCar)
+        } catch (error) {
+            console.log(error)
+        }
     }
 
     const onDirictionFound = (event) => {
@@ -82,7 +137,7 @@ const HomeScreen = (props) => {
                     <View style={{flexDirection: 'row', alignItems: 'center', backgroundColor: "#cb1a1a", width: 200,}}>
                         <Text style={{color: 'white', fontWeight: 'bold'}}>COMPLETE {order.type}</Text>   
                     </View>
-                    <Text style={styles.bottomText}>Dropping off {order.user.name}</Text>
+                    <Text style={styles.bottomText}>{order.user.username}</Text>
                 </View>
             )
         }
@@ -97,7 +152,7 @@ const HomeScreen = (props) => {
                         </View>
                         <Text>{order.distance ? order.distance.toFixed(1) : '?'} mi</Text>
                     </View>
-                    <Text style={styles.bottomText}>Dropping off {order.user.name}</Text>
+                    <Text style={styles.bottomText}>Dropping off {order.user.username}</Text>
                 </View>
             )
         }
@@ -111,11 +166,11 @@ const HomeScreen = (props) => {
                         </View>
                         <Text>{order.distance ? order.distance.toFixed(1) : '?'} mi</Text>
                     </View>
-                    <Text style={styles.bottomText}>Picking up {order.user.name}</Text>
+                    <Text style={styles.bottomText}>Picking up {order.user.username}</Text>
                 </View>
             )
         }
-        if(isOnline) {
+        if(car?.isActive) {
             return (
                 <Text style={styles.bottomText}>You're online</Text>
             )
@@ -140,7 +195,10 @@ const HomeScreen = (props) => {
             >
                 {order && 
                     <MapViewDirections
-                        origin={myPosition}
+                        origin={{
+                            latitude: car?.latitude, 
+                            longitude: car?.longitude,
+                        }}
                         onReady={onDirictionFound}
                         destination={getDestination}
                         apikey={GOOGLE_MAPS_APIKEY}
@@ -186,7 +244,7 @@ const HomeScreen = (props) => {
 
                 <Text style={styles.goText}>
                     {
-                        isOnline ? "END" : "Go"
+                        car?.isActive ? "END" : "Go"
                     }
                 </Text>
             </Pressable>
@@ -197,12 +255,12 @@ const HomeScreen = (props) => {
                 <Entypo name="menu" size={30} color="#4a4a4a" />
             </View>
 
-            {newOrder && <NewOrderPopup
-                newOrder={newOrder}
+            {newOrders.length > 0 && !order && <NewOrderPopup
+                newOrder={newOrders[0]}
                 duration={2}
                 distance={0.5}
                 onDecline={onDecline}
-                onAccept={() => onAccept(newOrder)}
+                onAccept={() => onAccept(newOrders[0])}
             />}
         </View>
     )

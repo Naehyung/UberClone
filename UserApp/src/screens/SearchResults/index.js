@@ -33,6 +33,7 @@ const SearchResults = (props) => {
                 destLongitude: destinationPlace.details.geometry.location.lng,
                 userId: userInfo.attributes.sub,
                 carId: "1",
+                status: "NEW",
             }
 
             const response = await API.graphql(
@@ -44,7 +45,7 @@ const SearchResults = (props) => {
             )
 
             console.log(response);
-            navigation.navigate("Home");
+            navigation.navigate("OrderPage", { id: response.data.createOrder.id });
         } catch (error) {
             console.log(error)
         }

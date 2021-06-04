@@ -20,11 +20,11 @@ const NewOrderPopup = ({newOrder, onDecline, onAccept, duration, distance}) => {
                     </View>
                     <Text style={styles.uberType}>
                         <AntDesign name="star" size={18} />
-                        {newOrder.user.rating}
+                        {newOrder.user?.rating}
                     </Text>
                 </View>
-                <Text style={styles.minutes}>{duration}</Text>
-                <Text style={styles.distance}>{distance}</Text>
+                <Text style={styles.minutes}>{duration} mins</Text>
+                <Text style={styles.distance}>{distance} mi</Text>
             </Pressable>
         </View>
     )
